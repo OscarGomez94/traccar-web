@@ -4,25 +4,74 @@ export default {
       noSsr: true,
     },
   },
+
   MuiOutlinedInput: {
     styleOverrides: {
       root: ({ theme }) => ({
-        backgroundColor: theme.palette.background.default,
+        minHeight: '48px',
+        backgroundColor: theme.palette.background.paper,
+        borderRadius: '10px',
+        transition: 'border-color 160ms ease, box-shadow 160ms ease',
+
+        '& .MuiOutlinedInput-notchedOutline': {
+          borderColor: theme.palette.divider,
+        },
+
+        '&:hover .MuiOutlinedInput-notchedOutline': {
+          borderColor: theme.palette.primary.main,
+        },
+
+        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+          borderColor: theme.palette.secondary.main,
+          borderWidth: '1.5px',
+        },
+
+        '&.Mui-focused': {
+          boxShadow: `0 0 0 3px ${
+            theme.palette.mode === 'dark'
+              ? 'rgba(92, 203, 197, 0.14)'
+              : 'rgba(24, 167, 160, 0.12)'
+          }`,
+        },
       }),
     },
   },
+
   MuiButton: {
     styleOverrides: {
+      root: {
+        borderRadius: '10px',
+        textTransform: 'none',
+        fontWeight: 600,
+        boxShadow: 'none',
+      },
+
       sizeMedium: {
-        height: '40px',
+        minHeight: '44px',
+      },
+
+      contained: {
+        '&:hover': {
+          boxShadow: 'none',
+        },
       },
     },
   },
+
+  MuiPaper: {
+    styleOverrides: {
+      rounded: {
+        borderRadius: '12px',
+      },
+    },
+  },
+
   MuiFormControl: {
     defaultProps: {
       size: 'small',
     },
   },
+
   MuiSnackbar: {
     defaultProps: {
       anchorOrigin: {
@@ -31,12 +80,14 @@ export default {
       },
     },
   },
+
   MuiTooltip: {
     defaultProps: {
       enterDelay: 500,
       enterNextDelay: 500,
     },
   },
+
   MuiTableCell: {
     styleOverrides: {
       root: ({ theme }) => ({
