@@ -45,13 +45,14 @@ const updateReadyValue = (value) => {
 
 const initMap = async () => {
   if (ready) return;
-  if (!map.hasImage('background')) {
-    Object.entries(mapImages).forEach(([key, value]) => {
+
+  Object.entries(mapImages).forEach(([key, value]) => {
+    if (!map.hasImage(key)) {
       map.addImage(key, value, {
         pixelRatio: window.devicePixelRatio,
       });
-    });
-  }
+    }
+  });
 };
 
 const MapView = ({ children }) => {

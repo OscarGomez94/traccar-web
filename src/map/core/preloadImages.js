@@ -122,19 +122,27 @@ export default async () => {
   const background = await loadImage(backgroundSvg);
   mapImages.background = await prepareIcon(background);
   mapImages.direction = await prepareIcon(await loadImage(directionSvg));
+
   await Promise.all(
     Object.keys(mapIcons).map(async (key) => {
       const results = [];
-      ['info', 'success', 'error', 'neutral'].forEach((color) => {
+
+      ['info', 'success', 'warning', 'error', 'neutral'].forEach((color) => {
         results.push(
           loadImage(mapIcons[key]).then((icon) => {
-            mapImages[`${key}-${color}`] = prepareIcon(background, icon, theme.palette[color].main);
+            mapImages[`${key}-${color}`] = prepareIcon(
+              background,
+              icon,
+              theme.palette[color].main,
+            );
           }),
         );
       });
+
       await Promise.all(results);
     }),
   );
+
   await Promise.all(
     Object.keys(eventIcons).map((key) =>
       loadImage(eventIcons[key]).then((icon) => {

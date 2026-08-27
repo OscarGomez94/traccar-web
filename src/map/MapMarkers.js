@@ -10,7 +10,15 @@ import { findFonts, toMapCoordinates } from './core/mapUtil';
 const onMouseEnter = () => (map.getCanvas().style.cursor = 'pointer');
 const onMouseLeave = () => (map.getCanvas().style.cursor = '');
 
-const MapMarkers = ({ markers, showTitles, cluster, direction, onClick, disabled }) => {
+const MapMarkers = ({
+  markers,
+  showTitles,
+  cluster,
+  direction,
+  onClick,
+  disabled,
+  priority = false,
+}) => {
   const theme = useTheme();
   const desktop = useMediaQuery(theme.breakpoints.up('md'));
   const iconScale = useAttributePreference('iconScale', desktop ? 0.75 : 1);
@@ -30,11 +38,17 @@ const MapMarkers = ({ markers, showTitles, cluster, direction, onClick, disabled
   const onClusterClick = useCatchCallback(async (event) => {
     if (disabledRef.current) return;
     event.preventDefault();
+
     const feature = event.features[0];
+
     const zoom = await map
       .getSource(feature.source)
       .getClusterExpansionZoom(feature.properties.cluster_id);
-    map.easeTo({ center: feature.geometry.coordinates, zoom });
+
+    map.easeTo({
+      center: feature.geometry.coordinates,
+      zoom,
+    });
   }, []);
 
   const layers = [
@@ -52,17 +66,32 @@ const MapMarkers = ({ markers, showTitles, cluster, direction, onClick, disabled
             'text-offset': [0, -2 * iconScale],
             'text-font': findFonts(map),
             'text-size': 12,
-            'symbol-sort-key': ['get', 'id'],
+            'symbol-sort-key': priority ? 1000000 : ['get', 'id'],
           }
         : {
             'icon-image': '{image}',
             'icon-size': iconScale,
             'icon-allow-overlap': true,
-            'symbol-sort-key': ['get', 'id'],
+            'symbol-sort-key': priority ? 1000000 : ['get', 'id'],
           },
-      ...(showTitles ? { paint: { 'text-halo-color': 'white', 'text-halo-width': 1 } } : {}),
+
+      ...(showTitles
+        ? {
+            paint: {
+              'text-halo-color': 'white',
+              'text-halo-width': 4,
+            },
+          }
+        : {}),
+
       ...(onClick
-        ? { on: { mouseenter: onMouseEnter, mouseleave: onMouseLeave, click: onMarkerClick } }
+        ? {
+            on: {
+              mouseenter: onMouseEnter,
+              mouseleave: onMouseLeave,
+              click: onMarkerClick,
+            },
+          }
         : {}),
     },
   ];
@@ -94,18 +123,47 @@ const MapMarkers = ({ markers, showTitles, cluster, direction, onClick, disabled
         'text-font': findFonts(map),
         'text-size': 14,
       },
-      on: { mouseenter: onMouseEnter, mouseleave: onMouseLeave, click: onClusterClick },
+      on: {
+        mouseenter: onMouseEnter,
+        mouseleave: onMouseLeave,
+        click: onClusterClick,
+      },
     });
   }
 
   useMapLayer({
-    source: cluster ? { cluster: true, clusterMaxZoom: 14, clusterRadius: 50 } : undefined,
+    source: cluster
+      ? {
+          cluster: true,
+          clusterMaxZoom: 14,
+          clusterRadius: 50,
+        }
+      : undefined,
+
     layers,
-    layersDeps: [showTitles, cluster, direction, iconScale, onMarkerClick, onClusterClick],
+
+    layersDeps: [
+      showTitles,
+      cluster,
+      direction,
+      iconScale,
+      priority,
+      onMarkerClick,
+      onClusterClick,
+    ],
+
     data: {
       type: 'FeatureCollection',
       features: markers.map(
-        ({ latitude, longitude, image, title, rotation, direction: showDirection, ...rest }) => ({
+        ({
+          latitude,
+          longitude,
+          image,
+          title,
+          rotation,
+          direction: showDirection,
+          ...rest
+        }) => ({
           type: 'Feature',
           geometry: {
             type: 'Point',
@@ -121,6 +179,7 @@ const MapMarkers = ({ markers, showTitles, cluster, direction, onClick, disabled
         }),
       ),
     },
+
     dataDeps: [markers, showTitles],
   });
 
