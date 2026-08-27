@@ -1,111 +1,158 @@
 import { useState, useRef } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
   Toolbar,
   IconButton,
   OutlinedInput,
-  InputAdornment,
   Popover,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-  Badge,
   ListItemButton,
   ListItemText,
   Tooltip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import { useTheme } from '@mui/material/styles';
+
 import MapIcon from '@mui/icons-material/Map';
 import DnsIcon from '@mui/icons-material/Dns';
 import AddIcon from '@mui/icons-material/Add';
-import TuneIcon from '@mui/icons-material/Tune';
+import FolderIcon from '@mui/icons-material/Folder';
+
 import { useTranslation } from '../common/components/LocalizationProvider';
 import { useDeviceReadonly } from '../common/util/permissions';
-import DeviceRow from './DeviceRow';
+import { devicesActions } from '../store';
 
 const useStyles = makeStyles()((theme) => ({
   toolbar: {
     display: 'flex',
-    gap: theme.spacing(1),
+    alignItems: 'center',
+    gap: theme.spacing(0.8),
+    minHeight: '72px',
+    paddingLeft: theme.spacing(1.25),
+    paddingRight: theme.spacing(1.25),
   },
-  filterPanel: {
-    display: 'flex',
-    flexDirection: 'column',
-    padding: theme.spacing(2),
-    gap: theme.spacing(2),
-    width: theme.dimensions.drawerWidthTablet,
+
+  viewButton: {
+    width: '42px',
+    height: '42px',
+    flexShrink: 0,
+    borderRadius: '10px',
+    color: theme.palette.text.secondary,
+
+    '&:hover': {
+      color: theme.palette.primary.main,
+      backgroundColor: theme.palette.action.hover,
+    },
+  },
+
+  search: {
+    flex: 1,
+    minWidth: 0,
+
+    '& .MuiOutlinedInput-root': {
+      minHeight: '46px',
+    },
+  },
+
+  addButton: {
+    width: '42px',
+    height: '42px',
+    flexShrink: 0,
+    borderRadius: '10px',
+    color: theme.palette.primary.main,
+
+    '&:hover': {
+      color: theme.palette.secondary.main,
+      backgroundColor: theme.palette.action.hover,
+    },
+  },
+
+  searchResult: {
+    minHeight: '54px',
+  },
+
+  searchResultText: {
+    '& .MuiListItemText-primary': {
+      fontSize: '14px',
+      fontWeight: 600,
+    },
+
+    '& .MuiListItemText-secondary': {
+      fontSize: '12px',
+    },
+  },
+
+  createMenu: {
+    minWidth: '210px',
+  },
+
+  createMenuItem: {
+    minHeight: '46px',
+  },
+
+  createMenuIcon: {
+    minWidth: '36px',
+    color: theme.palette.text.secondary,
   },
 }));
 
-const MainToolbar = ({
-  filteredDevices,
-  devicesOpen,
-  setDevicesOpen,
-  keyword,
-  setKeyword,
-  filter,
-  setFilter,
-  filterSort,
-  setFilterSort,
-  filterMap,
-  setFilterMap,
-}) => {
+const MainToolbar = ({ filteredDevices, devicesOpen, setDevicesOpen, keyword, setKeyword }) => {
   const { classes } = useStyles();
+
+  const dispatch = useDispatch();
   const theme = useTheme();
   const navigate = useNavigate();
   const t = useTranslation();
 
   const deviceReadonly = useDeviceReadonly();
 
-  const groups = useSelector((state) => state.groups.items);
   const devices = useSelector((state) => state.devices.items);
   const devicesLoaded = useSelector((state) => state.devices.loaded);
-  const geofences = useSelector((state) => state.geofences.items);
 
   const toolbarRef = useRef();
-  const inputRef = useRef();
-  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
-  const [devicesAnchorEl, setDevicesAnchorEl] = useState(null);
 
-  const deviceStatusCount = (status) =>
-    Object.values(devices).filter((d) => d.status === status).length;
+  const [devicesAnchorEl, setDevicesAnchorEl] = useState(null);
+  const [createAnchorEl, setCreateAnchorEl] = useState(null);
+
+  const handleDeviceSelect = (deviceId) => {
+    dispatch(devicesActions.selectId(deviceId));
+    setDevicesAnchorEl(null);
+  };
+
+  const handleCreateDevice = () => {
+    setCreateAnchorEl(null);
+    navigate('/settings/device');
+  };
+
+  const handleCreateGroup = () => {
+    setCreateAnchorEl(null);
+    navigate('/settings/group');
+  };
 
   return (
-    <Toolbar ref={toolbarRef} className={classes.toolbar}>
-      <IconButton edge="start" onClick={() => setDevicesOpen(!devicesOpen)}>
+    <Toolbar ref={toolbarRef} className={classes.toolbar} disableGutters>
+      <IconButton className={classes.viewButton} onClick={() => setDevicesOpen(!devicesOpen)}>
         {devicesOpen ? <MapIcon /> : <DnsIcon />}
       </IconButton>
+
       <OutlinedInput
-        ref={inputRef}
+        className={classes.search}
         placeholder={t('sharedSearchDevices')}
         value={keyword}
-        onChange={(e) => setKeyword(e.target.value)}
+        onChange={(event) => setKeyword(event.target.value)}
         onFocus={() => setDevicesAnchorEl(toolbarRef.current)}
-        onBlur={() => setDevicesAnchorEl(null)}
-        endAdornment={
-          <InputAdornment position="end">
-            <IconButton size="small" edge="end" onClick={() => setFilterAnchorEl(inputRef.current)}>
-              <Badge
-                color="info"
-                variant="dot"
-                invisible={
-                  !filter.statuses.length && !filter.groups.length && !filter.geofences.length
-                }
-              >
-                <TuneIcon fontSize="small" />
-              </Badge>
-            </IconButton>
-          </InputAdornment>
-        }
+        onBlur={() => {
+          window.setTimeout(() => {
+            setDevicesAnchorEl(null);
+          }, 150);
+        }}
         size="small"
         fullWidth
       />
+
       <Popover
         open={!!devicesAnchorEl && !devicesOpen}
         anchorEl={devicesAnchorEl}
@@ -117,102 +164,47 @@ const MainToolbar = ({
         marginThreshold={0}
         slotProps={{
           paper: {
-            style: { width: `calc(${toolbarRef.current?.clientWidth}px - ${theme.spacing(4)})` },
+            style: {
+              width: `calc(${toolbarRef.current?.clientWidth}px - ${theme.spacing(4)})`,
+            },
           },
         }}
         elevation={1}
         disableAutoFocus
         disableEnforceFocus
       >
-        {filteredDevices.slice(0, 3).map((_, index) => (
-          <DeviceRow key={filteredDevices[index].id} devices={filteredDevices} index={index} />
+        {filteredDevices.slice(0, 3).map((device) => (
+          <ListItemButton
+            key={device.id}
+            className={classes.searchResult}
+            onClick={() => handleDeviceSelect(device.id)}
+          >
+            <ListItemText
+              className={classes.searchResultText}
+              primary={device.name}
+              secondary={device.uniqueId}
+            />
+          </ListItemButton>
         ))}
+
         {filteredDevices.length > 3 && (
-          <ListItemButton alignItems="center" onClick={() => setDevicesOpen(true)}>
+          <ListItemButton
+            alignItems="center"
+            onClick={() => {
+              setDevicesOpen(true);
+              setDevicesAnchorEl(null);
+            }}
+          >
             <ListItemText primary={t('notificationAlways')} style={{ textAlign: 'center' }} />
           </ListItemButton>
         )}
       </Popover>
-      <Popover
-        open={!!filterAnchorEl}
-        anchorEl={filterAnchorEl}
-        onClose={() => setFilterAnchorEl(null)}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
+
+      <IconButton
+        className={classes.addButton}
+        onClick={(event) => setCreateAnchorEl(event.currentTarget)}
+        disabled={deviceReadonly}
       >
-        <div className={classes.filterPanel}>
-          <FormControl>
-            <InputLabel>{t('deviceStatus')}</InputLabel>
-            <Select
-              label={t('deviceStatus')}
-              value={filter.statuses}
-              onChange={(e) => setFilter({ ...filter, statuses: e.target.value })}
-              multiple
-            >
-              <MenuItem value="online">{`${t('deviceStatusOnline')} (${deviceStatusCount('online')})`}</MenuItem>
-              <MenuItem value="offline">{`${t('deviceStatusOffline')} (${deviceStatusCount('offline')})`}</MenuItem>
-              <MenuItem value="unknown">{`${t('deviceStatusUnknown')} (${deviceStatusCount('unknown')})`}</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl>
-            <InputLabel>{t('settingsGroups')}</InputLabel>
-            <Select
-              label={t('settingsGroups')}
-              value={filter.groups}
-              onChange={(e) => setFilter({ ...filter, groups: e.target.value })}
-              multiple
-            >
-              {Object.values(groups)
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((group) => (
-                  <MenuItem key={group.id} value={group.id}>
-                    {group.name}
-                  </MenuItem>
-                ))}
-            </Select>
-          </FormControl>
-          <FormControl>
-            <InputLabel>{t('sharedGeofences')}</InputLabel>
-            <Select
-              label={t('sharedGeofences')}
-              value={filter.geofences}
-              onChange={(e) => setFilter({ ...filter, geofences: e.target.value })}
-              multiple
-            >
-              {Object.values(geofences)
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((geofence) => (
-                  <MenuItem key={geofence.id} value={geofence.id}>
-                    {geofence.name}
-                  </MenuItem>
-                ))}
-            </Select>
-          </FormControl>
-          <FormControl>
-            <InputLabel>{t('sharedSortBy')}</InputLabel>
-            <Select
-              label={t('sharedSortBy')}
-              value={filterSort}
-              onChange={(e) => setFilterSort(e.target.value)}
-            >
-              <MenuItem value="">{'\u00a0'}</MenuItem>
-              <MenuItem value="name">{t('sharedName')}</MenuItem>
-              <MenuItem value="lastUpdate">{t('deviceLastUpdate')}</MenuItem>
-            </Select>
-          </FormControl>
-          <FormGroup>
-            <FormControlLabel
-              control={
-                <Checkbox checked={filterMap} onChange={(e) => setFilterMap(e.target.checked)} />
-              }
-              label={t('sharedFilterMap')}
-            />
-          </FormGroup>
-        </div>
-      </Popover>
-      <IconButton edge="end" onClick={() => navigate('/settings/device')} disabled={deviceReadonly}>
         <Tooltip
           open={!deviceReadonly && devicesLoaded && Object.keys(devices).length === 0}
           title={t('deviceRegisterFirst')}
@@ -221,6 +213,39 @@ const MainToolbar = ({
           <AddIcon />
         </Tooltip>
       </IconButton>
+
+      <Menu
+        anchorEl={createAnchorEl}
+        open={Boolean(createAnchorEl)}
+        onClose={() => setCreateAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        slotProps={{
+          paper: {
+            className: classes.createMenu,
+          },
+        }}
+      >
+        <MenuItem className={classes.createMenuItem} onClick={handleCreateDevice}>
+          <ListItemIcon className={classes.createMenuIcon}>
+            <DnsIcon fontSize="small" />
+          </ListItemIcon>
+          Nuevo dispositivo
+        </MenuItem>
+
+        <MenuItem className={classes.createMenuItem} onClick={handleCreateGroup}>
+          <ListItemIcon className={classes.createMenuIcon}>
+            <FolderIcon fontSize="small" />
+          </ListItemIcon>
+          Nuevo grupo
+        </MenuItem>
+      </Menu>
     </Toolbar>
   );
 };

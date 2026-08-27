@@ -20,10 +20,12 @@ const useStyles = makeStyles()((theme) => ({
   root: {
     height: '100%',
   },
+
   sidebar: {
     pointerEvents: 'none',
     display: 'flex',
     flexDirection: 'column',
+
     [theme.breakpoints.up('md')]: {
       position: 'fixed',
       left: 0,
@@ -32,29 +34,48 @@ const useStyles = makeStyles()((theme) => ({
       width: theme.dimensions.drawerWidthDesktop,
       margin: theme.spacing(1.5),
       zIndex: 3,
+
+      borderRadius: '16px',
+      overflow: 'hidden',
+      boxShadow: '0 10px 28px rgba(15, 39, 66, 0.16)',
     },
+
     [theme.breakpoints.down('md')]: {
       height: '100%',
       width: '100%',
     },
   },
+
   header: {
     pointerEvents: 'auto',
     zIndex: 6,
+
+    [theme.breakpoints.up('md')]: {
+      boxShadow: 'none',
+      borderBottom: `1px solid ${theme.palette.divider}`,
+    },
   },
+
   footer: {
     pointerEvents: 'auto',
     zIndex: 5,
+
+    [theme.breakpoints.up('md')]: {
+      borderTop: `1px solid ${theme.palette.divider}`,
+    },
   },
+
   middle: {
     flex: 1,
     display: 'grid',
     minHeight: 0,
   },
+
   contentMap: {
     pointerEvents: 'auto',
     gridArea: '1 / 1',
   },
+
   contentList: {
     pointerEvents: 'auto',
     gridArea: '1 / 1',
@@ -66,6 +87,7 @@ const useStyles = makeStyles()((theme) => ({
 
 const MainPage = () => {
   const { classes } = useStyles();
+
   const dispatch = useDispatch();
   const theme = useTheme();
 
@@ -74,22 +96,29 @@ const MainPage = () => {
   const mapOnSelect = useAttributePreference('mapOnSelect', true);
 
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
+
   const positions = useSelector((state) => state.session.positions);
+
+  const userId = useSelector((state) => state.session.user?.id);
+
   const [filteredPositions, setFilteredPositions] = useState([]);
-  const selectedPosition = filteredPositions.find(
+
+  const [hiddenDeviceIds, setHiddenDeviceIds] = usePersistedState(
+    `neocoreHiddenDevices:${userId || 'guest'}`,
+    [],
+  );
+
+  const visiblePositions = filteredPositions.filter(
+    (position) => !hiddenDeviceIds.includes(position.deviceId),
+  );
+
+  const selectedPosition = visiblePositions.find(
     (position) => selectedDeviceId && position.deviceId === selectedDeviceId,
   );
 
   const [filteredDevices, setFilteredDevices] = useState([]);
 
   const [keyword, setKeyword] = useState('');
-  const [filter, setFilter] = usePersistedState('deviceFilter', {
-    statuses: [],
-    groups: [],
-    geofences: [],
-  });
-  const [filterSort, setFilterSort] = usePersistedState('filterSort', '');
-  const [filterMap, setFilterMap] = usePersistedState('filterMap', false);
 
   const [devicesOpen, setDevicesOpen] = useState(desktop);
   const [eventsOpen, setEventsOpen] = useState(false);
@@ -102,27 +131,20 @@ const MainPage = () => {
     }
   }, [desktop, mapOnSelect, selectedDeviceId]);
 
-  useFilter(
-    keyword,
-    filter,
-    filterSort,
-    filterMap,
-    positions,
-    setFilteredDevices,
-    setFilteredPositions,
-  );
+  useFilter(keyword, positions, setFilteredDevices, setFilteredPositions);
 
   return (
     <div className={classes.root}>
       {desktop && (
         <Suspense fallback={null}>
           <MainMap
-            filteredPositions={filteredPositions}
+            filteredPositions={visiblePositions}
             selectedPosition={selectedPosition}
             onEventsClick={onEventsClick}
           />
         </Suspense>
       )}
+
       <div className={classes.sidebar}>
         <Paper square elevation={3} className={classes.header}>
           <MainToolbar
@@ -131,41 +153,44 @@ const MainPage = () => {
             setDevicesOpen={setDevicesOpen}
             keyword={keyword}
             setKeyword={setKeyword}
-            filter={filter}
-            setFilter={setFilter}
-            filterSort={filterSort}
-            setFilterSort={setFilterSort}
-            filterMap={filterMap}
-            setFilterMap={setFilterMap}
           />
         </Paper>
+
         <div className={classes.middle}>
           {!desktop && (
             <div className={classes.contentMap}>
               <Suspense fallback={null}>
                 <MainMap
-                  filteredPositions={filteredPositions}
+                  filteredPositions={visiblePositions}
                   selectedPosition={selectedPosition}
                   onEventsClick={onEventsClick}
                 />
               </Suspense>
             </div>
           )}
+
           <Paper
             square
             className={classes.contentList}
             style={devicesOpen ? {} : { visibility: 'hidden' }}
           >
-            <DeviceList devices={filteredDevices} />
+            <DeviceList
+              devices={filteredDevices}
+              hiddenDeviceIds={hiddenDeviceIds}
+              setHiddenDeviceIds={setHiddenDeviceIds}
+            />
           </Paper>
         </div>
+
         {desktop && (
           <div className={classes.footer}>
             <BottomMenu />
           </div>
         )}
       </div>
+
       <EventsDrawer open={eventsOpen} onClose={() => setEventsOpen(false)} />
+
       {selectedDeviceId && (
         <StatusCard
           deviceId={selectedDeviceId}

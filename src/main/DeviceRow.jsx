@@ -1,14 +1,12 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from 'tss-react/mui';
-import {
-  IconButton,
-  Tooltip,
-  Avatar,
-  ListItemAvatar,
-  ListItemText,
-  ListItemButton,
-  Typography,
-} from '@mui/material';
+import { IconButton, ListItemButton, Tooltip, Typography } from '@mui/material';
+
+import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
+
 import BatteryFullIcon from '@mui/icons-material/BatteryFull';
 import BatteryChargingFullIcon from '@mui/icons-material/BatteryChargingFull';
 import Battery60Icon from '@mui/icons-material/Battery60';
@@ -16,182 +14,360 @@ import BatteryCharging60Icon from '@mui/icons-material/BatteryCharging60';
 import Battery20Icon from '@mui/icons-material/Battery20';
 import BatteryCharging20Icon from '@mui/icons-material/BatteryCharging20';
 import ErrorIcon from '@mui/icons-material/Error';
+
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
+
 import { devicesActions } from '../store';
-import {
-  formatAlarm,
-  formatBoolean,
-  formatPercentage,
-  formatStatus,
-  getStatusColor,
-} from '../common/util/formatter';
+import { formatAlarm, formatBoolean, formatPercentage } from '../common/util/formatter';
 import { useTranslation } from '../common/components/LocalizationProvider';
-import { mapIconKey, mapIcons } from '../map/core/preloadImages';
 import { useAdministrator } from '../common/util/permissions';
 import EngineIcon from '../resources/images/data/engine.svg?react';
-import { useAttributePreference } from '../common/util/preferences';
-import GeofencesValue from '../common/components/GeofencesValue';
-import DriverValue from '../common/components/DriverValue';
-import MotionBar from './components/MotionBar';
-
-dayjs.extend(relativeTime);
 
 const useStyles = makeStyles()((theme) => ({
-  icon: {
-    width: '25px',
-    height: '25px',
-    filter: 'brightness(0) invert(1)',
+  rowContainer: {
+    padding: theme.spacing(0.3, 0.7),
   },
-  batteryText: {
-    fontSize: '0.75rem',
-    fontWeight: 'normal',
-    lineHeight: '0.875rem',
+
+  groupRow: {
+    minHeight: '52px',
+    padding: theme.spacing(0.45, 0.9),
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: '12px',
+    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F3F6F9',
+    transition: 'background-color 140ms ease, border-color 140ms ease',
+
+    '&:hover': {
+      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#EDF2F6',
+      borderColor: theme.palette.mode === 'dark' ? theme.palette.divider : '#CBD5E1',
+    },
   },
+
+  deviceRow: {
+    minHeight: '52px',
+    padding: theme.spacing(0.4, 0.9),
+    borderRadius: '9px',
+    transition: 'background-color 140ms ease',
+
+    '&:hover': {
+      backgroundColor: theme.palette.action.hover,
+    },
+  },
+
+  selected: {
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(92, 203, 197, 0.12)' : '#EAF7F5',
+
+    '&:hover': {
+      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(92, 203, 197, 0.16)' : '#E1F3F0',
+    },
+  },
+
+  visibilityButton: {
+    marginRight: theme.spacing(0.45),
+    padding: '4px',
+    color: theme.palette.secondary.main,
+    flexShrink: 0,
+  },
+
+  visibilityOff: {
+    marginRight: theme.spacing(0.45),
+    padding: '4px',
+    color: theme.palette.text.secondary,
+    flexShrink: 0,
+  },
+
+  groupContent: {
+    display: 'flex',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
+
+  groupText: {
+    display: 'flex',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
+
+  groupName: {
+    overflow: 'hidden',
+    color: theme.palette.text.primary,
+    fontSize: '14px',
+    fontWeight: 700,
+    lineHeight: 1.2,
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+
+  groupCount: {
+    marginLeft: theme.spacing(0.55),
+    color: theme.palette.text.secondary,
+    fontSize: '12px',
+    fontWeight: 600,
+    lineHeight: 1.2,
+    flexShrink: 0,
+  },
+
+  collapseButton: {
+    marginLeft: theme.spacing(0.4),
+    padding: '4px',
+    color: theme.palette.text.secondary,
+    flexShrink: 0,
+  },
+
+  deviceContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
+
+  deviceName: {
+    overflow: 'hidden',
+    color: theme.palette.text.primary,
+    fontSize: '14px',
+    fontWeight: 600,
+    lineHeight: 1.2,
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+
+  deviceUpdate: {
+    marginTop: '2px',
+    overflow: 'hidden',
+    color: theme.palette.text.secondary,
+    fontSize: '11.5px',
+    fontWeight: 400,
+    lineHeight: 1.2,
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+
+  indicators: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '1px',
+    marginLeft: theme.spacing(0.45),
+    marginRight: theme.spacing(0.45),
+    flexShrink: 0,
+  },
+
+  indicatorButton: {
+    padding: '2px',
+  },
+
   success: {
     color: theme.palette.success.main,
   },
+
   warning: {
     color: theme.palette.warning.main,
   },
+
   error: {
     color: theme.palette.error.main,
   },
+
   neutral: {
     color: theme.palette.neutral.main,
   },
-  selected: {
-    backgroundColor: theme.palette.action.selected,
+
+  speed: {
+    minWidth: '58px',
+    marginLeft: theme.spacing(0.35),
+    color: theme.palette.secondary.main,
+    fontSize: '13px',
+    fontWeight: 700,
+    lineHeight: 1.2,
+    textAlign: 'right',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
   },
 }));
 
-const DeviceRow = ({ devices, index, style }) => {
+const DeviceRow = ({
+  rows,
+  index,
+  style,
+  hiddenDeviceIds,
+  toggleDeviceVisibility,
+  toggleGroupVisibility,
+  toggleGroupCollapsed,
+}) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
   const t = useTranslation();
 
   const admin = useAdministrator();
+
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
 
-  const item = devices[index];
-  const position = useSelector((state) => state.session.positions[item.id]);
+  const positions = useSelector((state) => state.session.positions);
 
-  const devicePrimary = useAttributePreference('devicePrimary', 'name');
-  const deviceSecondary = useAttributePreference('deviceSecondary', '');
+  const row = rows[index];
 
-  const resolveFieldValue = (field) => {
-    if (field === 'geofenceIds') {
-      const geofenceIds = position?.geofenceIds;
-      return geofenceIds?.length ? <GeofencesValue geofenceIds={geofenceIds} /> : null;
-    }
-    if (field === 'driverUniqueId') {
-      const driverUniqueId = position?.attributes?.driverUniqueId;
-      return driverUniqueId ? <DriverValue driverUniqueId={driverUniqueId} /> : null;
-    }
-    if (field === 'motion') {
-      return <MotionBar deviceId={item.id} />;
-    }
-    return item[field];
-  };
+  if (!row) {
+    return null;
+  }
 
-  const primaryValue = resolveFieldValue(devicePrimary);
-  const secondaryValue = resolveFieldValue(deviceSecondary);
+  if (row.type === 'group') {
+    const allVisible = row.devices.every((device) => !hiddenDeviceIds.includes(device.id));
 
-  const secondaryText = () => {
-    let status;
-    if (item.status === 'online' || !item.lastUpdate) {
-      status = formatStatus(item.status, t);
-    } else {
-      status = dayjs(item.lastUpdate).fromNow();
-    }
     return (
-      <>
-        {secondaryValue && (
-          <>
-            {secondaryValue}
-            {' • '}
-          </>
-        )}
-        <span className={classes[getStatusColor(item.status)]}>{status}</span>
-      </>
+      <div style={style} className={classes.rowContainer}>
+        <ListItemButton
+          className={classes.groupRow}
+          onClick={() => toggleGroupCollapsed(row.groupId)}
+        >
+          <IconButton
+            size="small"
+            className={allVisible ? classes.visibilityButton : classes.visibilityOff}
+            onClick={(event) => {
+              event.stopPropagation();
+              toggleGroupVisibility(row.devices);
+            }}
+          >
+            {allVisible ? (
+              <RadioButtonCheckedIcon fontSize="small" />
+            ) : (
+              <RadioButtonUncheckedIcon fontSize="small" />
+            )}
+          </IconButton>
+
+          <div className={classes.groupContent}>
+            <div className={classes.groupText}>
+              <Typography component="span" className={classes.groupName}>
+                {row.groupName}
+              </Typography>
+
+              <Typography component="span" className={classes.groupCount}>
+                ({row.devices.length})
+              </Typography>
+            </div>
+
+            <IconButton
+              size="small"
+              className={classes.collapseButton}
+              onClick={(event) => {
+                event.stopPropagation();
+                toggleGroupCollapsed(row.groupId);
+              }}
+            >
+              {row.collapsed ? <AddIcon fontSize="small" /> : <RemoveIcon fontSize="small" />}
+            </IconButton>
+          </div>
+        </ListItemButton>
+      </div>
     );
-  };
+  }
+
+  const item = row.device;
+
+  const position = positions[item.id];
+
+  const hidden = hiddenDeviceIds.includes(item.id);
+
+  const lastReport = item.lastUpdate
+    ? dayjs(item.lastUpdate).format('DD/MM/YYYY HH:mm:ss')
+    : 'Sin reporte';
+
+  const speed = position?.speed ? `${Math.round(position.speed * 1.852)} km/h` : '0 km/h';
 
   return (
-    <div style={style}>
+    <div style={style} className={classes.rowContainer}>
       <ListItemButton
         key={item.id}
+        className={`${classes.deviceRow} ${selectedDeviceId === item.id ? classes.selected : ''}`}
         onClick={() => dispatch(devicesActions.selectId(item.id))}
         disabled={!admin && item.disabled}
-        selected={selectedDeviceId === item.id}
-        className={selectedDeviceId === item.id ? classes.selected : null}
       >
-        <ListItemAvatar>
-          <Avatar>
-            <img className={classes.icon} src={mapIcons[mapIconKey(item.category)]} alt="" />
-          </Avatar>
-        </ListItemAvatar>
-        <ListItemText
-          primary={primaryValue}
-          secondary={secondaryText()}
-          slots={{
-            primary: Typography,
-            secondary: Typography,
+        <IconButton
+          size="small"
+          className={hidden ? classes.visibilityOff : classes.visibilityButton}
+          onClick={(event) => {
+            event.stopPropagation();
+            toggleDeviceVisibility(item.id);
           }}
-          slotProps={{
-            primary: { noWrap: true },
-            secondary: { noWrap: true },
-          }}
-        />
+        >
+          {hidden ? (
+            <RadioButtonUncheckedIcon fontSize="small" />
+          ) : (
+            <RadioButtonCheckedIcon fontSize="small" />
+          )}
+        </IconButton>
+
+        <div className={classes.deviceContent}>
+          <Typography component="div" className={classes.deviceName}>
+            {item.name}
+          </Typography>
+
+          <Typography component="div" className={classes.deviceUpdate}>
+            {lastReport}
+          </Typography>
+        </div>
+
         {position && (
-          <>
+          <div className={classes.indicators}>
             {position.attributes.hasOwnProperty('alarm') && (
               <Tooltip title={`${t('eventAlarm')}: ${formatAlarm(position.attributes.alarm, t)}`}>
-                <IconButton size="small">
-                  <ErrorIcon fontSize="small" className={classes.error} />
+                <IconButton size="small" className={classes.indicatorButton}>
+                  <ErrorIcon sx={{ fontSize: 17 }} className={classes.error} />
                 </IconButton>
               </Tooltip>
             )}
+
             {position.attributes.hasOwnProperty('ignition') && (
               <Tooltip
-                title={`${t('positionIgnition')}: ${formatBoolean(position.attributes.ignition, t)}`}
+                title={`${t('positionIgnition')}: ${formatBoolean(
+                  position.attributes.ignition,
+                  t,
+                )}`}
               >
-                <IconButton size="small">
+                <IconButton size="small" className={classes.indicatorButton}>
                   {position.attributes.ignition ? (
-                    <EngineIcon width={20} height={20} className={classes.success} />
+                    <EngineIcon width={17} height={17} className={classes.success} />
                   ) : (
-                    <EngineIcon width={20} height={20} className={classes.neutral} />
+                    <EngineIcon width={17} height={17} className={classes.neutral} />
                   )}
                 </IconButton>
               </Tooltip>
             )}
+
             {position.attributes.hasOwnProperty('batteryLevel') && (
               <Tooltip
-                title={`${t('positionBatteryLevel')}: ${formatPercentage(position.attributes.batteryLevel)}`}
+                title={`${t('positionBatteryLevel')}: ${formatPercentage(
+                  position.attributes.batteryLevel,
+                )}`}
               >
-                <IconButton size="small">
-                  {(position.attributes.batteryLevel > 70 &&
-                    (position.attributes.charge ? (
-                      <BatteryChargingFullIcon fontSize="small" className={classes.success} />
+                <IconButton size="small" className={classes.indicatorButton}>
+                  {position.attributes.batteryLevel > 70 ? (
+                    position.attributes.charge ? (
+                      <BatteryChargingFullIcon sx={{ fontSize: 17 }} className={classes.success} />
                     ) : (
-                      <BatteryFullIcon fontSize="small" className={classes.success} />
-                    ))) ||
-                    (position.attributes.batteryLevel > 30 &&
-                      (position.attributes.charge ? (
-                        <BatteryCharging60Icon fontSize="small" className={classes.warning} />
-                      ) : (
-                        <Battery60Icon fontSize="small" className={classes.warning} />
-                      ))) ||
-                    (position.attributes.charge ? (
-                      <BatteryCharging20Icon fontSize="small" className={classes.error} />
+                      <BatteryFullIcon sx={{ fontSize: 17 }} className={classes.success} />
+                    )
+                  ) : position.attributes.batteryLevel > 30 ? (
+                    position.attributes.charge ? (
+                      <BatteryCharging60Icon sx={{ fontSize: 17 }} className={classes.warning} />
                     ) : (
-                      <Battery20Icon fontSize="small" className={classes.error} />
-                    ))}
+                      <Battery60Icon sx={{ fontSize: 17 }} className={classes.warning} />
+                    )
+                  ) : position.attributes.charge ? (
+                    <BatteryCharging20Icon sx={{ fontSize: 17 }} className={classes.error} />
+                  ) : (
+                    <Battery20Icon sx={{ fontSize: 17 }} className={classes.error} />
+                  )}
                 </IconButton>
               </Tooltip>
             )}
-          </>
+          </div>
         )}
+
+        <Typography component="div" className={classes.speed}>
+          {speed}
+        </Typography>
       </ListItemButton>
     </div>
   );
